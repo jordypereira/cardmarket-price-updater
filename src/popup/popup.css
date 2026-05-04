@@ -1,0 +1,42 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  min-width: 300px;
+  font-family: "Segoe UI", sans-serif;
+  background: #f5f6f8;
+  color: #111827;
+}
+.wrap {
+  padding: 12px;
+}
+h1 {
+  margin: 0 0 4px;
+  font-size: 18px;
+}
+.muted {
+  margin: 0 0 10px;
+  color: #6b7280;
+  font-size: 12px;
+}
+.card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+button {
+  width: 100%;
+  border: none;
+  border-radius: 8px;
+  padding: 10px;
+  font-weight: 700;
+  background: #111827;
+  color: #fff;
+  cursor: pointer;
+}
+button:hover {
+  background: #1f2937;
+}

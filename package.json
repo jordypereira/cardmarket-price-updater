@@ -1,0 +1,21 @@
+{
+  "name": "cardmarket-price-updater",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "build:firefox": "node build-firefox.mjs",
+    "package:firefox": "npm run build:firefox && rm -f cardmarket-price-updater-firefox.xpi && cd dist-firefox && bestzip ../cardmarket-price-updater-firefox.xpi *",
+    "clean": "rm -rf dist dist-firefox"
+  },
+  "dependencies": {
+    "ofetch": "^1.4.1"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.326",
+    "bestzip": "^2.2.1",
+    "esbuild": "^0.25.4",
+    "typescript": "^5.8.3"
+  }
+}
