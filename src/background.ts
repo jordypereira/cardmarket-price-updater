@@ -45,7 +45,7 @@ function scrapeTab(
     const tabId = tab.id;
 
     // Safety timeout: close tab and report failure after 20 s.
-    const safetyTimer = window.setTimeout(() => {
+    const safetyTimer = globalThis.setTimeout(() => {
       chrome.tabs.onUpdated.removeListener(onUpdated);
       chrome.tabs.remove(tabId, () => {});
       respond({ ok: false, error: "Tab load timeout" });
@@ -65,7 +65,7 @@ function scrapeTab(
           tabId,
           { action: "scrapePrice", language },
           (response: { ok: boolean; snapshot?: LowestPriceSnapshot; error?: string } | undefined) => {
-            window.clearTimeout(safetyTimer);
+            globalThis.clearTimeout(safetyTimer);
             chrome.tabs.remove(tabId, () => {});
 
             if (chrome.runtime.lastError || !response?.ok || !response.snapshot) {

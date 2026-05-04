@@ -198,13 +198,18 @@ function ensureActionGroup(rowEl: HTMLElement): HTMLElement {
   return group;
 }
 
-function addAcceptButton(rowEl: HTMLElement, articleId: string, suggestedPrice: number): void {
+function addAcceptButton(
+  rowEl: HTMLElement,
+  articleId: string,
+  suggestedPrice: number,
+  visible: boolean
+): void {
   let acceptBtn = rowEl.querySelector<HTMLButtonElement>(".cmpu-accept-btn");
   if (acceptBtn) {
     acceptBtn.dataset.articleId = articleId;
     acceptBtn.dataset.suggestedPrice = String(suggestedPrice);
     acceptBtn.title = `Accept ${toPriceText(suggestedPrice)} EUR`;
-    acceptBtn.style.display = "";
+    acceptBtn.style.display = visible ? "" : "none";
     return;
   }
 
@@ -220,7 +225,7 @@ function addAcceptButton(rowEl: HTMLElement, articleId: string, suggestedPrice: 
   acceptBtn.style.color = "#fff";
   acceptBtn.style.border = "none";
   acceptBtn.style.cursor = "pointer";
-  acceptBtn.style.display = "";
+  acceptBtn.style.display = visible ? "" : "none";
   acceptBtn.title = `Accept ${toPriceText(suggestedPrice)} EUR`;
   acceptBtn.dataset.articleId = articleId;
   acceptBtn.dataset.suggestedPrice = String(suggestedPrice);
@@ -369,12 +374,14 @@ async function scanSingleRow(articleId: string, cardUrl: string, language: strin
 
     prefillExistingInlineInput(articleId, sameLanguageLowest);
 
+    const sameAsCurrent = isSamePrice(currentPrice, sameLanguageLowest);
+
     setRowStatus(rowEl, `${toPriceText(sameLanguageLowest)} EUR`, "ok", {
       tooltip,
       visiblePrice: sameLanguageLowest,
-      sameAsCurrent: isSamePrice(currentPrice, sameLanguageLowest)
+      sameAsCurrent
     });
-    addAcceptButton(rowEl, articleId, sameLanguageLowest);
+    addAcceptButton(rowEl, articleId, sameLanguageLowest, !sameAsCurrent);
     debugLog("Single row scan complete", {
       articleId,
       sameLanguageLowest,
@@ -805,12 +812,14 @@ async function processRows(rows: OfferRow[]): Promise<ScanRowResult[]> {
         priceMap.set(row.articleId, sameLanguageLowest);
         prefillExistingInlineInput(row.articleId, sameLanguageLowest);
 
+        const sameAsCurrent = isSamePrice(row.currentPrice, sameLanguageLowest);
+
         setRowStatus(row.rowEl, `${toPriceText(sameLanguageLowest)} EUR`, "ok", {
           tooltip,
           visiblePrice: sameLanguageLowest,
-          sameAsCurrent: isSamePrice(row.currentPrice, sameLanguageLowest)
+          sameAsCurrent
         });
-        addAcceptButton(row.rowEl, row.articleId, sameLanguageLowest);
+        addAcceptButton(row.rowEl, row.articleId, sameLanguageLowest, !sameAsCurrent);
         debugLog("Suggested price", {
           articleId: row.articleId,
           cardName: row.cardName,
