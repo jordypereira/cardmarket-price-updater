@@ -18,19 +18,20 @@ A browser extension that scans your Cardmarket "Stock → Offers → Singles" pa
 
 | Browser | Manifest | Package |
 |---------|----------|---------|
-| Chrome  | MV3      | `dist/` (load unpacked) |
-| Firefox | MV2      | `cardmarket-price-updater-firefox.xpi` |
+| Chrome  | MV3      | `dist-chrome/` (load unpacked), `exports/cardmarket-price-updater-chrome.zip` |
+| Firefox | MV2      | `exports/cardmarket-price-updater-firefox.xpi` |
 
 ## Development
 
 ```bash
 npm install
 
-# Chrome (loads from dist/)
+# Chrome (loads from dist-chrome/)
 npm run build
 
-# Firefox (produces .xpi)
+# Firefox + Chrome packages in exports/
 npm run package:firefox
+npm run package:chrome
 
 # Clean build outputs
 npm run clean
@@ -42,7 +43,7 @@ Load in Firefox:
 
 Load in Chrome:
 1. Open `chrome://extensions` → Enable Developer mode
-2. Load unpacked → select the `dist/` folder
+2. Load unpacked → select the `dist-chrome/` folder
 
 ## How it works
 

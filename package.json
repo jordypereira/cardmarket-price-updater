@@ -6,9 +6,9 @@
   "scripts": {
     "build": "node build.mjs",
     "build:firefox": "node build-firefox.mjs",
-    "package:chrome": "npm run build && rm -f cardmarket-price-updater-chrome.zip && cd dist && bestzip ../cardmarket-price-updater-chrome.zip *",
-    "package:firefox": "npm run build:firefox && rm -f cardmarket-price-updater-firefox.xpi && cd dist-firefox && bestzip ../cardmarket-price-updater-firefox.xpi *",
-    "clean": "rm -rf dist dist-firefox"
+    "package:chrome": "npm run build && mkdir -p exports && rm -f exports/cardmarket-price-updater-chrome.zip && cd dist-chrome && bestzip ../exports/cardmarket-price-updater-chrome.zip *",
+    "package:firefox": "npm run build:firefox && mkdir -p exports && rm -f exports/cardmarket-price-updater-firefox.xpi && cd dist-firefox && bestzip ../exports/cardmarket-price-updater-firefox.xpi *",
+    "clean": "rm -rf dist-chrome dist-firefox exports"
   },
   "dependencies": {
     "ofetch": "^1.4.1"

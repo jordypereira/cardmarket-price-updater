@@ -1,14 +1,14 @@
 import { build } from "esbuild";
 import { cpSync, mkdirSync, rmSync } from "node:fs";
 
-rmSync("dist", { recursive: true, force: true });
-mkdirSync("dist", { recursive: true });
+rmSync("dist-chrome", { recursive: true, force: true });
+mkdirSync("dist-chrome", { recursive: true });
 
 await Promise.all([
   build({
     entryPoints: ["src/content/main.ts"],
     bundle: true,
-    outfile: "dist/content.js",
+    outfile: "dist-chrome/content.js",
     format: "iife",
     target: "chrome114",
     sourcemap: false,
@@ -17,7 +17,7 @@ await Promise.all([
   build({
     entryPoints: ["src/background.ts"],
     bundle: true,
-    outfile: "dist/background.js",
+    outfile: "dist-chrome/background.js",
     format: "iife",
     target: "chrome114",
     sourcemap: false,
@@ -26,7 +26,7 @@ await Promise.all([
   build({
     entryPoints: ["src/popup/main.ts"],
     bundle: true,
-    outfile: "dist/popup.js",
+    outfile: "dist-chrome/popup.js",
     format: "iife",
     target: "chrome114",
     sourcemap: false,
@@ -35,7 +35,7 @@ await Promise.all([
   build({
     entryPoints: ["src/content/scraper.ts"],
     bundle: true,
-    outfile: "dist/scraper.js",
+    outfile: "dist-chrome/scraper.js",
     format: "iife",
     target: "chrome114",
     sourcemap: false,
@@ -43,6 +43,6 @@ await Promise.all([
   })
 ]);
 
-cpSync("src/manifest.json", "dist/manifest.json");
-cpSync("src/popup/popup.html", "dist/popup.html");
-cpSync("src/popup/popup.css", "dist/popup.css");
+cpSync("src/manifest.json", "dist-chrome/manifest.json");
+cpSync("src/popup/popup.html", "dist-chrome/popup.html");
+cpSync("src/popup/popup.css", "dist-chrome/popup.css");

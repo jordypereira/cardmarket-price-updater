@@ -35,14 +35,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: cardmarket-price-updater-firefox
-          path: cardmarket-price-updater-firefox.xpi
+          path: exports/cardmarket-price-updater-firefox.xpi
           if-no-files-found: error
 
       - name: Upload Chrome artifact
         uses: actions/upload-artifact@v4
         with:
           name: cardmarket-price-updater-chrome
-          path: cardmarket-price-updater-chrome.zip
+          path: exports/cardmarket-price-updater-chrome.zip
           if-no-files-found: error
 
       - name: Publish release assets (tags only)
@@ -50,5 +50,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            cardmarket-price-updater-firefox.xpi
-            cardmarket-price-updater-chrome.zip
+            exports/cardmarket-price-updater-firefox.xpi
+            exports/cardmarket-price-updater-chrome.zip
