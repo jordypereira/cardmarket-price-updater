@@ -24,8 +24,42 @@ A browser extension that scans your Cardmarket "Stock → Offers → Singles" pa
 
 | Browser | Manifest | Package |
 |---------|----------|---------|
-| Chrome  | MV3      | `dist-chrome/` (load unpacked), `exports/cardmarket-price-updater-chrome.zip` |
-| Firefox | MV2      | `exports/cardmarket-price-updater-firefox.xpi` |
+| Chrome  | MV3      | Load unpacked from `dist-chrome/` or use `exports/cardmarket-price-updater-chrome.zip` |
+| Firefox | MV2      | Install `exports/cardmarket-price-updater-firefox.xpi` |
+
+## Installation & Usage
+
+### Firefox (Easiest)
+
+1. Download the latest `.xpi` file from [GitHub Releases](https://github.com/jordypereira/cardmarket-price-updater/releases)
+2. Open Firefox and go to `about:addons`
+3. Click the gear icon ⚙️ → "Install Add-on From File"
+4. Select the `.xpi` file
+5. Click "Add" when prompted
+
+### Chrome (Unpacked/Developer Mode)
+
+1. Download the latest `.zip` from [GitHub Releases](https://github.com/jordypereira/cardmarket-price-updater/releases) or clone this repo
+2. Unzip the file (or run `npm run build` if cloned)
+3. Open Chrome and go to `chrome://extensions`
+4. Enable **Developer mode** (toggle in top right)
+5. Click **Load unpacked** and select the `dist-chrome/` folder
+6. The extension should appear in your browser toolbar
+
+### Using the Extension
+
+Once installed:
+
+1. **Navigate to Cardmarket** → Stock → Offers → Singles
+2. Click **"Scan lowest and prefill"** (floating button, bottom right) to scan all visible offers
+   - Or click individual **⟳ Scan** buttons per row
+3. **Hover over the price chip** to see:
+   - Same-language lowest price
+   - Global cheapest price (any language)
+4. Click **Accept** to auto-fill and submit the suggested price
+   - (Hidden if the scanned price is stale/cached beyond 24 hours)
+
+**Tip:** Prices are cached for 24 hours per card + language. First scan loads prices fresh; subsequent scans are instant.
 
 ## Development
 
