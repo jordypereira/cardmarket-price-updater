@@ -1,5 +1,11 @@
 # Cardmarket Price Updater
 
+⚠️ **Disclaimer**
+
+This is a **personal automation tool** for your own Cardmarket account. Use at your own risk. The author assumes no liability for account suspension, data loss, or other consequences. This tool automates actions that may not be permitted by Cardmarket's Terms of Service. Review their terms before use.
+
+---
+
 A browser extension that scans your Cardmarket "Stock → Offers → Singles" page and suggests the lowest same-language price for each listing. Prices are shown inline with a hover tooltip that also shows the global cheapest offer (any language), so you can make informed pricing decisions without leaving your offers page.
 
 ## Features

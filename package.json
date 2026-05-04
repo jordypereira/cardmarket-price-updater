@@ -1,7 +1,23 @@
 {
+  "private": true,
   "name": "cardmarket-price-updater",
   "version": "0.1.0",
-  "private": true,
+  "description": "Personal browser extension for Cardmarket pricing automation. Use at your own risk.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jordypereira/cardmarket-price-updater.git"
+  },
+  "homepage": "https://github.com/jordypereira/cardmarket-price-updater#readme",
+  "bugs": {
+    "url": "https://github.com/jordypereira/cardmarket-price-updater/issues"
+  },
+  "keywords": [
+    "browser-extension",
+    "cardmarket",
+    "firefox",
+    "chrome"
+  ],
   "type": "module",
   "scripts": {
     "build": "node build.mjs",
