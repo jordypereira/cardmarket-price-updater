@@ -6,6 +6,7 @@ import {
   toPriceText,
   extractLowestFromDocument
 } from "../shared";
+import { shouldShowAcceptButton } from "./accept-visibility";
 
 
 type ScanRowResult = {
@@ -341,12 +342,14 @@ async function scanSingleRow(articleId: string, cardUrl: string, language: strin
     let sameLanguageLowest = cachedSame;
     let globalLowest = cachedGlobal;
     let globalLowestLanguage = cache[gk]?.language ?? null;
+    let isFreshFetch = false;
 
     if (sameLanguageLowest === null || globalLowest === null) {
       const snapshot = await fetchLowestSnapshot(cardUrl, language);
       sameLanguageLowest = snapshot.sameLanguagePrice;
       globalLowest = snapshot.globalLowestPrice;
       globalLowestLanguage = snapshot.globalLowestLanguage;
+      isFreshFetch = true;
 
       if (sameLanguageLowest !== null) {
         cache[ck] = { value: sameLanguageLowest, timestamp: Date.now(), language };
@@ -381,7 +384,12 @@ async function scanSingleRow(articleId: string, cardUrl: string, language: strin
       visiblePrice: sameLanguageLowest,
       sameAsCurrent
     });
-    addAcceptButton(rowEl, articleId, sameLanguageLowest, !sameAsCurrent);
+    addAcceptButton(
+      rowEl,
+      articleId,
+      sameLanguageLowest,
+      shouldShowAcceptButton(isFreshFetch, sameAsCurrent)
+    );
     debugLog("Single row scan complete", {
       articleId,
       sameLanguageLowest,
@@ -759,12 +767,14 @@ async function processRows(rows: OfferRow[]): Promise<ScanRowResult[]> {
         let sameLanguageLowest = cachedSame;
         let globalLowest = cachedGlobal;
         let globalLowestLanguage = cache[gk]?.language ?? null;
+        let isFreshFetch = false;
 
         if (sameLanguageLowest === null || globalLowest === null) {
           const snapshot = await fetchLowestSnapshot(row.cardUrl, row.language);
           sameLanguageLowest = snapshot.sameLanguagePrice;
           globalLowest = snapshot.globalLowestPrice;
           globalLowestLanguage = snapshot.globalLowestLanguage;
+          isFreshFetch = true;
 
           if (sameLanguageLowest !== null) {
             cache[ck] = { value: sameLanguageLowest, timestamp: Date.now(), language: row.language };
@@ -819,7 +829,12 @@ async function processRows(rows: OfferRow[]): Promise<ScanRowResult[]> {
           visiblePrice: sameLanguageLowest,
           sameAsCurrent
         });
-        addAcceptButton(row.rowEl, row.articleId, sameLanguageLowest, !sameAsCurrent);
+        addAcceptButton(
+          row.rowEl,
+          row.articleId,
+          sameLanguageLowest,
+          shouldShowAcceptButton(isFreshFetch, sameAsCurrent)
+        );
         debugLog("Suggested price", {
           articleId: row.articleId,
           cardName: row.cardName,

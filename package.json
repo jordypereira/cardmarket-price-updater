@@ -24,15 +24,19 @@
     "build:firefox": "node build-firefox.mjs",
     "package:chrome": "npm run build && mkdir -p exports && rm -f exports/cardmarket-price-updater-chrome.zip && cd dist-chrome && bestzip ../exports/cardmarket-price-updater-chrome.zip *",
     "package:firefox": "npm run build:firefox && mkdir -p exports && rm -f exports/cardmarket-price-updater-firefox.xpi && cd dist-firefox && bestzip ../exports/cardmarket-price-updater-firefox.xpi *",
-    "clean": "rm -rf dist-chrome dist-firefox exports"
+    "clean": "rm -rf dist-chrome dist-firefox exports",
+    "test": "vitest run",
+    "test:ui": "vitest --ui"
   },
   "dependencies": {
     "ofetch": "^1.4.1"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.326",
+    "@vitest/ui": "^3.2.4",
     "bestzip": "^2.2.1",
     "esbuild": "^0.25.4",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
   }
 }
