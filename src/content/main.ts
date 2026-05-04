@@ -1,4 +1,12 @@
 type RowStatus = "updated" | "cached" | "no-match" | "error" | "missing-data";
+import {
+  type LowestPriceSnapshot,
+  detectLanguage,
+  toNumber,
+  toPriceText,
+  extractLowestFromDocument
+} from "../shared";
+
 
 type ScanRowResult = {
   articleId: string;
@@ -27,12 +35,6 @@ type PriceCacheRecord = {
   language?: string;
 };
 
-type LowestPriceSnapshot = {
-  sameLanguagePrice: number | null;
-  globalLowestPrice: number | null;
-  globalLowestLanguage: string | null;
-};
-
 type OfferRow = {
   articleId: string;
   cardName: string;
@@ -58,82 +60,6 @@ function debugLog(message: string, data?: unknown): void {
   console.log("[CMPU]", message);
 }
 
-const KNOWN_LANGUAGES = new Set([
-  "English",
-  "French",
-  "German",
-  "Spanish",
-  "Italian",
-  "Japanese",
-  "Portuguese",
-  "Russian",
-  "Korean",
-  "Dutch",
-  "Polish",
-  "Czech",
-  "Hungarian",
-  "S-Chinese",
-  "T-Chinese",
-  "Indonesian",
-  "Thai"
-]);
-
-function stripHtml(value: string): string {
-  return value.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-}
-
-function extractLanguageLabelFromIcon(icon: HTMLElement): string | null {
-  const candidates = [
-    icon.getAttribute("aria-label"),
-    icon.getAttribute("data-bs-original-title"),
-    icon.getAttribute("data-original-title"),
-    icon.getAttribute("title")
-  ];
-
-  const onmouseover = icon.getAttribute("onmouseover") || "";
-  const showMsgBoxMatch = onmouseover.match(/showMsgBox\(this,`([^`]+)`\)/);
-  if (showMsgBoxMatch?.[1]) {
-    candidates.push(showMsgBoxMatch[1]);
-  }
-
-  for (const raw of candidates) {
-    if (!raw) {
-      continue;
-    }
-    const cleaned = stripHtml(raw);
-    for (const language of KNOWN_LANGUAGES) {
-      if (cleaned === language || cleaned.includes(language)) {
-        return language;
-      }
-    }
-  }
-
-  return null;
-}
-
-function toNumber(priceText: string): number | null {
-  const raw = priceText.trim();
-  // Empty text becomes Number("") === 0, which is invalid for our use-case.
-  if (!/[0-9]/.test(raw)) {
-    return null;
-  }
-
-  const normalized = raw
-    .replace(/\s/g, "")
-    .replace(/€/g, "")
-    .replace(/\./g, "")
-    .replace(",", ".");
-  const parsed = Number(normalized);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return null;
-  }
-  return parsed;
-}
-
-function toPriceText(value: number): string {
-  return value.toFixed(2).replace(".", ",");
-}
-
 function parseArticleId(rowEl: HTMLElement): string | null {
   const editLink = rowEl.querySelector<HTMLAnchorElement>('a[data-modal*="idArticle="]');
   if (!editLink) {
@@ -142,29 +68,6 @@ function parseArticleId(rowEl: HTMLElement): string | null {
   const modalPath = editLink.getAttribute("data-modal") ?? "";
   const match = modalPath.match(/idArticle=(\d+)/);
   return match?.[1] ?? null;
-}
-
-function detectLanguage(container: ParentNode): string {
-  const icons = Array.from(container.querySelectorAll<HTMLElement>(".product-attributes .icon[aria-label]"));
-  if (!icons.length) {
-    // Fallback for live DOM variants where aria-label is omitted.
-    const fallbackIcons = Array.from(container.querySelectorAll<HTMLElement>(".product-attributes .icon"));
-    for (const icon of fallbackIcons) {
-      const label = extractLanguageLabelFromIcon(icon);
-      if (label) {
-        return label;
-      }
-    }
-    return "English";
-  }
-
-  for (const icon of icons) {
-    const label = extractLanguageLabelFromIcon(icon);
-    if (label) {
-      return label;
-    }
-  }
-  return "English";
 }
 
 function findVisibleOfferRows(): OfferRow[] {
@@ -537,67 +440,6 @@ function fromCache(cache: Record<string, PriceCacheRecord>, key: string): number
   return record.value;
 }
 
-function extractLowestFromProductDocument(doc: Document, cardUrl: string, language: string): LowestPriceSnapshot {
-  const rows = Array.from(doc.querySelectorAll<HTMLElement>("#table .table-body .article-row"));
-  debugLog("Parsed product rows", { cardUrl, count: rows.length });
-
-  let sameLanguagePrice: number | null = null;
-  let globalLowestPrice: number | null = null;
-  let globalLowestLanguage: string | null = null;
-  let matchedLanguageRows = 0;
-
-  for (const row of rows) {
-    const rowLanguage = detectLanguage(row);
-
-    const priceTextEl =
-      row.querySelector<HTMLElement>(".col-offer .price-container .color-primary") ||
-      row.querySelector<HTMLElement>(".mobile-offer-container .color-primary");
-
-    if (!priceTextEl) {
-      continue;
-    }
-
-    const numeric = toNumber(priceTextEl.textContent || "");
-    if (numeric === null) {
-      debugLog("Skipped non-numeric price text", {
-        cardUrl,
-        language,
-        text: priceTextEl.textContent || ""
-      });
-      continue;
-    }
-
-    if (globalLowestPrice === null || numeric < globalLowestPrice) {
-      globalLowestPrice = numeric;
-      globalLowestLanguage = rowLanguage || null;
-    }
-
-    if (rowLanguage !== language) {
-      continue;
-    }
-    matchedLanguageRows += 1;
-
-    if (sameLanguagePrice === null || numeric < sameLanguagePrice) {
-      sameLanguagePrice = numeric;
-    }
-  }
-
-  debugLog("Computed lowest snapshot", {
-    cardUrl,
-    targetLanguage: language,
-    matchedLanguageRows,
-    sameLanguagePrice,
-    globalLowestPrice,
-    globalLowestLanguage
-  });
-
-  return {
-    sameLanguagePrice,
-    globalLowestPrice,
-    globalLowestLanguage
-  };
-}
-
 async function fetchLowestViaHiddenIframe(cardUrl: string, language: string): Promise<LowestPriceSnapshot> {
   debugLog("Attempting hidden iframe fallback", { cardUrl, language });
 
@@ -655,7 +497,7 @@ async function fetchLowestViaHiddenIframe(cardUrl: string, language: string): Pr
           return;
         }
 
-        const snapshot = extractLowestFromProductDocument(doc, cardUrl, language);
+        const snapshot = extractLowestFromDocument(doc, language, cardUrl);
         debugLog("Hidden iframe fallback success", { cardUrl, language, snapshot });
         settleResolve(snapshot);
       } catch (error) {
@@ -675,6 +517,40 @@ async function fetchLowestViaHiddenIframe(cardUrl: string, language: string): Pr
 
 async function fetchLowestSnapshot(cardUrl: string, language: string): Promise<LowestPriceSnapshot> {
   debugLog("Fetching product snapshot", { cardUrl, language });
+
+  // 1. Primary: ask background to open a real browser tab and scrape.
+  try {
+    const tabResult = await new Promise<{ ok: boolean; snapshot?: LowestPriceSnapshot; error?: string }>(
+      (resolve, reject) => {
+        chrome.runtime.sendMessage(
+          { action: "scrapeTab", cardUrl, language },
+          (response) => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message));
+            } else {
+              resolve(response as { ok: boolean; snapshot?: LowestPriceSnapshot; error?: string });
+            }
+          }
+        );
+      }
+    );
+
+    if (tabResult.ok && tabResult.snapshot) {
+      debugLog("Background tab scrape success", { cardUrl, snapshot: tabResult.snapshot });
+      return tabResult.snapshot;
+    }
+
+    debugLog("Background tab scrape failed, falling back", { cardUrl, error: tabResult.error });
+  } catch (tabError) {
+    debugLog("Background tab scrape exception, falling back", {
+      cardUrl,
+      error: tabError instanceof Error ? tabError.message : String(tabError)
+    });
+  }
+
+  if (abortScan) throw new Error("Scan aborted");
+
+  // 2. Fallback: direct fetch with retry + hidden iframe.
 
   // Retry with exponential backoff for 403 and network errors
   let lastError: unknown;
@@ -703,7 +579,7 @@ async function fetchLowestSnapshot(cardUrl: string, language: string): Promise<L
 
       const html = await response.text();
       const parsed = new DOMParser().parseFromString(html, "text/html");
-      return extractLowestFromProductDocument(parsed, cardUrl, language);
+      return extractLowestFromDocument(parsed, language, cardUrl);
     } catch (error) {
       if (abortScan) {
         throw error;

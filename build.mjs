@@ -31,6 +31,15 @@ await Promise.all([
     target: "chrome114",
     sourcemap: false,
     minify: false
+  }),
+  build({
+    entryPoints: ["src/content/scraper.ts"],
+    bundle: true,
+    outfile: "dist/scraper.js",
+    format: "iife",
+    target: "chrome114",
+    sourcemap: false,
+    minify: false
   })
 ]);
 

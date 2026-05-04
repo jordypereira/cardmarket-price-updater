@@ -31,6 +31,15 @@ await Promise.all([
     target: "firefox128",
     sourcemap: false,
     minify: false
+  }),
+  build({
+    entryPoints: ["src/content/scraper.ts"],
+    bundle: true,
+    outfile: "dist-firefox/scraper.js",
+    format: "iife",
+    target: "firefox128",
+    sourcemap: false,
+    minify: false
   })
 ]);
 

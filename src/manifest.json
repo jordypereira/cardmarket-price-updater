@@ -3,7 +3,7 @@
   "name": "Cardmarket Price Updater",
   "version": "0.1.0",
   "description": "Find and prefill lowest same-language prices for your Cardmarket offers.",
-  "permissions": ["storage"],
+  "permissions": ["storage", "tabs"],
   "host_permissions": ["https://www.cardmarket.com/*", "https://cardmarket.com/*"],
   "action": {
     "default_title": "Cardmarket Price Updater",
@@ -16,6 +16,11 @@
     {
       "matches": ["https://www.cardmarket.com/*/Stock/Offers/Singles*", "https://cardmarket.com/*/Stock/Offers/Singles*"],
       "js": ["content.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.cardmarket.com/*/Products/Singles/*", "https://cardmarket.com/*/Products/Singles/*"],
+      "js": ["scraper.js"],
       "run_at": "document_idle"
     }
   ]
