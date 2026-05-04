@@ -5,6 +5,7 @@ env:
 
 permissions:
   contents: write
+  packages: write
 
 on:
   workflow_dispatch:
@@ -61,3 +62,33 @@ jobs:
           files: |
             exports/cardmarket-price-updater-firefox.xpi
             exports/cardmarket-price-updater-chrome.zip
+
+  publish-github-package:
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node for GitHub Packages
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          registry-url: https://npm.pkg.github.com
+          scope: '@jordypereira'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prepare scoped package metadata for GitHub Packages
+        run: |
+          npm pkg set name='@jordypereira/cardmarket-price-updater'
+          npm pkg set publishConfig.registry='https://npm.pkg.github.com'
+          npm pkg set publishConfig.access='public'
+
+      - name: Publish to GitHub Packages
+        run: npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
