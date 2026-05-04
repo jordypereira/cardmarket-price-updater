@@ -48,6 +48,8 @@ const HISTORY_KEY = "cmpu.history";
 const CACHE_KEY = "cmpu.cache";
 const CACHE_TTL_MS = 1000 * 60 * 60 * 24; // 24 hours
 const RUNNER_ID = "cmpu-runner";
+const ACCEPT_ALL_ID = "cmpu-accept-all";
+const FLOATING_BAR_ID = "cmpu-floating-bar";
 const DEBUG_KEY = "cmpu.debug";
 
 let abortScan = false;
@@ -186,6 +188,9 @@ function ensureActionGroup(rowEl: HTMLElement): HTMLElement {
 function addAcceptButton(rowEl: HTMLElement, articleId: string, suggestedPrice: number): void {
   let acceptBtn = rowEl.querySelector<HTMLButtonElement>(".cmpu-accept-btn");
   if (acceptBtn) {
+    acceptBtn.dataset.articleId = articleId;
+    acceptBtn.dataset.suggestedPrice = String(suggestedPrice);
+    acceptBtn.title = `Accept ${toPriceText(suggestedPrice)} EUR`;
     return;
   }
 
@@ -202,6 +207,8 @@ function addAcceptButton(rowEl: HTMLElement, articleId: string, suggestedPrice: 
   acceptBtn.style.border = "none";
   acceptBtn.style.cursor = "pointer";
   acceptBtn.title = `Accept ${toPriceText(suggestedPrice)} EUR`;
+  acceptBtn.dataset.articleId = articleId;
+  acceptBtn.dataset.suggestedPrice = String(suggestedPrice);
 
   const group = ensureActionGroup(rowEl);
   group.appendChild(acceptBtn);
@@ -841,34 +848,87 @@ async function processRows(rows: OfferRow[]): Promise<ScanRowResult[]> {
   return results;
 }
 
-function renderRunnerButton(): HTMLButtonElement | null {
-  if (document.getElementById(RUNNER_ID)) {
+function renderFloatingControls(): { scanButton: HTMLButtonElement; acceptAllButton: HTMLButtonElement } | null {
+  if (document.getElementById(FLOATING_BAR_ID)) {
     return null;
   }
 
-  const button = document.createElement("button");
-  button.id = RUNNER_ID;
-  button.type = "button";
-  button.textContent = "Scan lowest and prefill";
-  button.style.position = "fixed";
-  button.style.right = "16px";
-  button.style.bottom = "16px";
-  button.style.zIndex = "99999";
-  button.style.border = "0";
-  button.style.borderRadius = "8px";
-  button.style.padding = "10px 14px";
-  button.style.fontWeight = "700";
-  button.style.background = "#0d6efd";
-  button.style.color = "#fff";
-  button.style.boxShadow = "0 4px 18px rgba(0,0,0,0.25)";
-  document.body.appendChild(button);
-  return button;
+  const bar = document.createElement("div");
+  bar.id = FLOATING_BAR_ID;
+  bar.style.position = "fixed";
+  bar.style.right = "16px";
+  bar.style.bottom = "16px";
+  bar.style.zIndex = "99999";
+  bar.style.display = "flex";
+  bar.style.gap = "8px";
+
+  const scanButton = document.createElement("button");
+  scanButton.id = RUNNER_ID;
+  scanButton.type = "button";
+  scanButton.textContent = "Scan lowest and prefill";
+  scanButton.style.border = "0";
+  scanButton.style.borderRadius = "8px";
+  scanButton.style.padding = "10px 14px";
+  scanButton.style.fontWeight = "700";
+  scanButton.style.background = "#0d6efd";
+  scanButton.style.color = "#fff";
+  scanButton.style.boxShadow = "0 4px 18px rgba(0,0,0,0.25)";
+
+  const acceptAllButton = document.createElement("button");
+  acceptAllButton.id = ACCEPT_ALL_ID;
+  acceptAllButton.type = "button";
+  acceptAllButton.textContent = "Accept all";
+  acceptAllButton.style.border = "0";
+  acceptAllButton.style.borderRadius = "8px";
+  acceptAllButton.style.padding = "10px 14px";
+  acceptAllButton.style.fontWeight = "700";
+  acceptAllButton.style.background = "#198754";
+  acceptAllButton.style.color = "#fff";
+  acceptAllButton.style.boxShadow = "0 4px 18px rgba(0,0,0,0.25)";
+
+  bar.appendChild(acceptAllButton);
+  bar.appendChild(scanButton);
+  document.body.appendChild(bar);
+
+  return { scanButton, acceptAllButton };
 }
 
 function setRunnerState(button: HTMLButtonElement, isBusy: boolean): void {
-  button.disabled = isBusy;
+  button.disabled = false;
   button.style.opacity = isBusy ? "0.7" : "1";
   button.textContent = isBusy ? "Scanning... (click to stop)" : "Scan lowest and prefill";
+}
+
+function setAcceptAllState(button: HTMLButtonElement, isBusy: boolean): void {
+  button.disabled = isBusy;
+  button.style.opacity = isBusy ? "0.7" : "1";
+  button.textContent = isBusy ? "Accepting..." : "Accept all";
+}
+
+async function runAcceptAllVisible(): Promise<{ total: number; accepted: number }> {
+  const acceptButtons = Array.from(document.querySelectorAll<HTMLButtonElement>(".cmpu-accept-btn"));
+  let accepted = 0;
+
+  for (const button of acceptButtons) {
+    const articleId = button.dataset.articleId;
+    const suggestedPriceRaw = button.dataset.suggestedPrice;
+    if (!articleId || !suggestedPriceRaw) {
+      continue;
+    }
+
+    const suggestedPrice = Number(suggestedPriceRaw);
+    if (!Number.isFinite(suggestedPrice) || suggestedPrice <= 0) {
+      continue;
+    }
+
+    await autoSubmitPrice(articleId, suggestedPrice);
+    accepted += 1;
+
+    // Small delay helps Cardmarket process each modal submit cleanly.
+    await new Promise((resolve) => setTimeout(resolve, 300));
+  }
+
+  return { total: acceptButtons.length, accepted };
 }
 
 async function runScan(): Promise<void> {
@@ -916,14 +976,16 @@ function init(): void {
     }
   }
 
-  const button = renderRunnerButton();
-  if (!button) {
+  const controls = renderFloatingControls();
+  if (!controls) {
     return;
   }
+  const { scanButton, acceptAllButton } = controls;
 
   let isScanning = false;
+  let isAcceptingAll = false;
 
-  button.addEventListener("click", async () => {
+  scanButton.addEventListener("click", async () => {
     if (isScanning) {
       // Second click: stop the scan
       debugLog("Stop button clicked");
@@ -933,11 +995,33 @@ function init(): void {
 
     try {
       isScanning = true;
-      setRunnerState(button, true);
+      setRunnerState(scanButton, true);
+      setAcceptAllState(acceptAllButton, true);
       await runScan();
     } finally {
       isScanning = false;
-      setRunnerState(button, false);
+      setRunnerState(scanButton, false);
+      setAcceptAllState(acceptAllButton, false);
+    }
+  });
+
+  acceptAllButton.addEventListener("click", async () => {
+    if (isScanning) {
+      alert("Stop the scan before running Accept all.");
+      return;
+    }
+    if (isAcceptingAll) {
+      return;
+    }
+
+    try {
+      isAcceptingAll = true;
+      setAcceptAllState(acceptAllButton, true);
+      const result = await runAcceptAllVisible();
+      alert(`Accept all complete. Accepted ${result.accepted} of ${result.total} visible rows.`);
+    } finally {
+      isAcceptingAll = false;
+      setAcceptAllState(acceptAllButton, false);
     }
   });
 }
