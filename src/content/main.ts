@@ -110,7 +110,7 @@ function setRowStatus(
   rowEl: HTMLElement,
   text: string,
   tone: "ok" | "warn" | "err",
-  options?: { tooltip?: string; visiblePrice?: number | null }
+  options?: { tooltip?: string; visiblePrice?: number | null; sameAsCurrent?: boolean }
 ): void {
   const existingBadge = rowEl.querySelector<HTMLElement>(".cmpu-badge");
   if (existingBadge) {
@@ -155,8 +155,21 @@ function setRowStatus(
 
   inlinePrice.textContent = `${toPriceText(visiblePrice)} EUR`;
   inlinePrice.title = `CMPU: ${tooltipText}`;
-  inlinePrice.style.background = tone === "ok" ? "#d5f5e3" : tone === "warn" ? "#fff3cd" : "#f8d7da";
-  inlinePrice.style.color = tone === "ok" ? "#0f5132" : tone === "warn" ? "#664d03" : "#842029";
+  const sameAsCurrent = options?.sameAsCurrent === true;
+  if (tone === "ok" && sameAsCurrent) {
+    inlinePrice.style.background = "#fff3cd";
+    inlinePrice.style.color = "#664d03";
+  } else {
+    inlinePrice.style.background = tone === "ok" ? "#d5f5e3" : tone === "warn" ? "#fff3cd" : "#f8d7da";
+    inlinePrice.style.color = tone === "ok" ? "#0f5132" : tone === "warn" ? "#664d03" : "#842029";
+  }
+}
+
+function isSamePrice(currentPrice: number | null, suggestedPrice: number): boolean {
+  if (currentPrice === null) {
+    return false;
+  }
+  return Math.abs(currentPrice - suggestedPrice) < 0.001;
 }
 
 function ensureActionGroup(rowEl: HTMLElement): HTMLElement {
@@ -191,6 +204,7 @@ function addAcceptButton(rowEl: HTMLElement, articleId: string, suggestedPrice: 
     acceptBtn.dataset.articleId = articleId;
     acceptBtn.dataset.suggestedPrice = String(suggestedPrice);
     acceptBtn.title = `Accept ${toPriceText(suggestedPrice)} EUR`;
+    acceptBtn.style.display = "";
     return;
   }
 
@@ -206,6 +220,7 @@ function addAcceptButton(rowEl: HTMLElement, articleId: string, suggestedPrice: 
   acceptBtn.style.color = "#fff";
   acceptBtn.style.border = "none";
   acceptBtn.style.cursor = "pointer";
+  acceptBtn.style.display = "";
   acceptBtn.title = `Accept ${toPriceText(suggestedPrice)} EUR`;
   acceptBtn.dataset.articleId = articleId;
   acceptBtn.dataset.suggestedPrice = String(suggestedPrice);
@@ -307,6 +322,11 @@ async function autoSubmitPrice(articleId: string, suggestedPrice: number): Promi
 
 async function scanSingleRow(articleId: string, cardUrl: string, language: string, rowEl: HTMLElement): Promise<void> {
   try {
+    const currentPriceTextEl =
+      rowEl.querySelector<HTMLElement>(".col-offer .price-container .color-primary") ||
+      rowEl.querySelector<HTMLElement>(".mobile-offer-container .color-primary");
+    const currentPrice = currentPriceTextEl ? toNumber(currentPriceTextEl.textContent || "") : null;
+
     const cache = await readCache();
     const ck = cacheKey(cardUrl, language);
     const gk = cacheKeyGlobal(cardUrl);
@@ -351,7 +371,8 @@ async function scanSingleRow(articleId: string, cardUrl: string, language: strin
 
     setRowStatus(rowEl, `${toPriceText(sameLanguageLowest)} EUR`, "ok", {
       tooltip,
-      visiblePrice: sameLanguageLowest
+      visiblePrice: sameLanguageLowest,
+      sameAsCurrent: isSamePrice(currentPrice, sameLanguageLowest)
     });
     addAcceptButton(rowEl, articleId, sameLanguageLowest);
     debugLog("Single row scan complete", {
@@ -786,7 +807,8 @@ async function processRows(rows: OfferRow[]): Promise<ScanRowResult[]> {
 
         setRowStatus(row.rowEl, `${toPriceText(sameLanguageLowest)} EUR`, "ok", {
           tooltip,
-          visiblePrice: sameLanguageLowest
+          visiblePrice: sameLanguageLowest,
+          sameAsCurrent: isSamePrice(row.currentPrice, sameLanguageLowest)
         });
         addAcceptButton(row.rowEl, row.articleId, sameLanguageLowest);
         debugLog("Suggested price", {
@@ -899,10 +921,10 @@ function setRunnerState(button: HTMLButtonElement, isBusy: boolean): void {
   button.textContent = isBusy ? "Scanning... (click to stop)" : "Scan lowest and prefill";
 }
 
-function setAcceptAllState(button: HTMLButtonElement, isBusy: boolean): void {
-  button.disabled = isBusy;
-  button.style.opacity = isBusy ? "0.7" : "1";
-  button.textContent = isBusy ? "Accepting..." : "Accept all";
+function setAcceptAllState(button: HTMLButtonElement, state: "idle" | "scanning" | "accepting"): void {
+  button.disabled = state !== "idle";
+  button.style.opacity = state === "idle" ? "1" : "0.7";
+  button.textContent = state === "accepting" ? "Accepting all..." : "Accept all";
 }
 
 async function runAcceptAllVisible(): Promise<{ total: number; accepted: number }> {
@@ -996,12 +1018,12 @@ function init(): void {
     try {
       isScanning = true;
       setRunnerState(scanButton, true);
-      setAcceptAllState(acceptAllButton, true);
+      setAcceptAllState(acceptAllButton, "scanning");
       await runScan();
     } finally {
       isScanning = false;
       setRunnerState(scanButton, false);
-      setAcceptAllState(acceptAllButton, false);
+      setAcceptAllState(acceptAllButton, "idle");
     }
   });
 
@@ -1016,12 +1038,12 @@ function init(): void {
 
     try {
       isAcceptingAll = true;
-      setAcceptAllState(acceptAllButton, true);
+      setAcceptAllState(acceptAllButton, "accepting");
       const result = await runAcceptAllVisible();
       alert(`Accept all complete. Accepted ${result.accepted} of ${result.total} visible rows.`);
     } finally {
       isAcceptingAll = false;
-      setAcceptAllState(acceptAllButton, false);
+      setAcceptAllState(acceptAllButton, "idle");
     }
   });
 }
